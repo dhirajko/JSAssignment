@@ -7,11 +7,12 @@ app.listen(3000);
 
 // initalize multer
 const multer = require('multer');
-const upload = multer({ dest: 'upload' })
+const upload = multer({ dest: 'public/upload' })
 
 //inatilize path
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 const ExifImage = require('exif').ExifImage;                //using Exif image defined
 app.use(express.static('form.html'));
@@ -59,7 +60,8 @@ const Cat = mongoose.model('Cat', catSchema);
 //give the middle ware multer to upload file
 app.post('/reg', upload.single('image'), (req, resp, next) => {
   console.log(req.file);
-  req.body.original = 'upload/' + req.file.filename;
+
+  req.body.original = 'public/upload/'+req.file.filename;
   console.log('uploaded');
   next();
 });
@@ -70,9 +72,10 @@ app.post('/reg', (req, resp) => {                                             //
   try {
     new ExifImage({ image: req.body.original }, function (error, exifData) {
       if (error)
-        console.log('Error: ' + error.message);
+        console.log('Error: sss' + error.message);
       else {
         location = exifData.gps;
+        
         console.log(exifData.gps);
         const billi = new Cat({
           name: req.body.name,
@@ -80,9 +83,9 @@ app.post('/reg', (req, resp) => {                                             //
           gender: req.body.gender,
           color: req.body.color,
           weight: req.body.weight,
-          image: req.body.original,
+          image: 'upload/'+req.file.filename,
           location: location  
-         
+          
         });
         console.log(billi);
         billi.save();
@@ -105,14 +108,23 @@ app.post('/reg', (req, resp) => {                                             //
 
 
 
-app.get('/', (req, resp) => {                                                           // to home page
+app.get('/', (req, resp) => {  
+  resp.header("Access-Control-Allow-Origin", "*");
+  resp.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");                                                        // to home page
   resp.redirect('index.html');
 })
 
-app.get('/alldata', (req, res) => {                                                      // to all json file of database
-  Cat.find().then(cats => {
-    res.send(cats);
-  });
+app.get('/alldata', (req, res) => {    
+  
+  Cat.find({}, (err, data) => {
+    res.json(data);
+})
+  // to all json file of database
+  /*Cat.find().then(cats => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.json(cats);
+  });*/
 });
 
 

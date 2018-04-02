@@ -1,4 +1,4 @@
-const url = `http://localhost:3000/alldata`;
+const url = 'http://localhost:3000/alldata';
 jsonFile = '';
 
 function listQ() {                                                                              //sorted fetch
@@ -29,9 +29,21 @@ function listQ() {                                                              
 document.getElementById("list").addEventListener("click", listQ);
 
 
+var xmlHttp = new XMLHttpRequest();
+xmlHttp.onreadystatechange = function () {
+    if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+        updateUI(JSON.parse(xmlHttp.responseText));
+        console.log(xmlHttp.responseText);
+        jsonFile=xmlHttp.responseText;
+    }
+
+}
+xmlHttp.open("GET", url, true); // true for asynchronous 
+xmlHttp.send(null);
 
 
-fetch(url)                                                                                              // default fetch
+
+/*fetch(url,{mode: 'cors'})                                                                                              // default fetch
     .then(givenjson => givenjson.json())
     .then(receivedJSON => {
         jsonFile = receivedJSON;
@@ -40,11 +52,12 @@ fetch(url)                                                                      
         
 
 
-    });
+    });*/
 
 
 updateUI = function (receivedJSON) {                                                                    // UI of web page
-
+        
+        
     for (const each of receivedJSON) {
         // console.log(each.image);
         const eachDiv = document.createElement('div'); //creating all required div
@@ -56,14 +69,14 @@ updateUI = function (receivedJSON) {                                            
         console.log("hello")
 
 
-        Image.src = each.thumbnail; //giving property of required div
+        Image.src = each.image; //giving property of required div
         Image.className = 'image';
         eachDiv.className = 'eachThumbnail';
         titleDiv.className = 'Description';
-        titleDiv.innerHTML = '<h2>' + each.title + '</h2><br/>' + each.details;
+        titleDiv.innerHTML = '<h2>' + each.name+ '</h2><br/>' + each.color;
         button.innerHTML = 'view';
         button.className = 'viewbutton';
-        button.id = each.id;
+        button.id = each._id;
 
 
 
@@ -82,9 +95,9 @@ updateUI = function (receivedJSON) {                                            
             fullimage.style.margin = 'inherit';
             fullimage.style.border = '5px solid black';
             fullimage.style.borderRadius = '5px';
-            fullimage.src = each.thumbnail;
+            fullimage.src = each.image;
             smallbox.className = 'mapbox';
-            smallbox.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + each.coordinates.lat + ',' + each.coordinates.lng + '&hl=en&z=14&amp;output=embed" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>'
+            smallbox.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + (each.location.GPSLatitude[0]+each.location.GPSLatitude[1]/60+each.location.GPSLatitude[2]/3600) + ',' + (each.location.GPSLongitude[0]+each.location.GPSLongitude[1]/60+each.location.GPSLongitude[2]/3600) + '&hl=en&z=14&amp;output=embed" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>'
 
 
 

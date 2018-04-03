@@ -1,133 +1,147 @@
-const url = 'cat.json';
-jsonFile = '';
+'use strict';
 
-function listQ() {                                                                              //sorted fetch
-    const e = document.getElementById("list")
-
-    if (e.selectedIndex > 1) {
-        jsonFile.sort(function (a, b) {
-            var textA = a.title.toUpperCase();
-            var textB = b.title.toUpperCase();
-            return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-        })
-       // jsonFile.reverse()
-    }
-    else
-    if (e.selectedIndex > 0) {
-        jsonFile.sort(function (a, b) {
-            var textA = a.category.toUpperCase();
-            var textB = b.category.toUpperCase();
-            return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-        })
-       // jsonFile.reverse()
-    }
-    
-    console.log(jsonFile);
-    document.querySelector('.container').innerHTML='';
-    updateUI(jsonFile);
-}
-document.getElementById("list").addEventListener("click", listQ);
+const express = require('express');
+const app = express();
+app.listen(3000);
 
 
+// initalize multer
+const multer = require('multer');
+const upload = multer({ dest: 'public/upload' })
+
+//inatilize path
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
 
 
-fetch(url)                                                                                              // default fetch
-    .then(givenjson => givenjson.json())
-    .then(receivedJSON => {
-        jsonFile = receivedJSON;
-        updateUI(jsonFile);
+const ExifImage = require('exif').ExifImage;                //using Exif image defined
+app.use(express.static('form.html'));
+
+// body-parser parse application/x-www-form-urlencoded
+const bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.json())                                                // parse application/json
 
 
-
-    });
-
-
-updateUI = function (receivedJSON) {                                                                    // UI of web page
-
-    for (const each of receivedJSON) {
-        // console.log(each.image);
-        const eachDiv = document.createElement('div'); //creating all required div
-        const eachImageDiv = document.createElement('div');
-        const titleDiv = document.createElement('div');
-        const buttonDiv = document.createElement('div');
-        const Image = document.createElement('img');
-        const button = document.createElement('button');
-        console.log("hello")
-
-
-        Image.src = each.thumbnail; //giving property of required div
-        Image.className = 'image';
-        eachDiv.className = 'eachThumbnail';
-        titleDiv.className = 'Description';
-        titleDiv.innerHTML = '<h2>' + each.title + '</h2><br/>' + each.details;
-        button.innerHTML = 'view';
-        button.className = 'viewbutton';
-        button.id = each.id;
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/cat').then(() => {
+  console.log('Connected successfully.');
+}, err => {
+  console.log('Connection to db failed: ' + err);
+});
 
 
 
 
-        button.addEventListener('click', () => { //event listener for each view button
-            const modalbox = document.querySelector('.modal');
-            const modal_content = document.querySelector('.modal-content');
-            const fullimage = document.createElement('img');
-            const smallbox = document.createElement('div');
+const Schema = mongoose.Schema;                                               // Schema
+
+const catSchema = new Schema({
+  name: String,
+  dob: Date,
+  gender: {
+    type: String,
+    enum: ['male', 'female'],
+  },
+  color: String,
+  weight: Number,
+  image: String,
+  location: Object
+
+});
+
+// Model
+const Cat = mongoose.model('Cat', catSchema);
+
+
+/*serve static files (save the form to public-folder) this will create the public folder in server level*/
 
 
 
+//give the middle ware multer to upload file
+app.post('/reg', upload.single('image'), (req, resp, next) => {
+  console.log(req.file);
 
-            fullimage.style.width = '100%';
-            fullimage.style.height = 'auto';
-            fullimage.style.margin = 'inherit';
-            fullimage.style.border = '5px solid black';
-            fullimage.style.borderRadius = '5px';
-            fullimage.src = each.thumbnail;
-            smallbox.className = 'mapbox';
-            smallbox.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + each.coordinates.lat + ',' + each.coordinates.lng + '&hl=en&z=14&amp;output=embed" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>'
-
+  req.body.original = 'public/upload/'+req.file.filename;
+  console.log('uploaded');
+  next();
+});
 
 
-
-
-
-
-
-            modalbox.style.display = 'block';
-
-
-            modal_content.appendChild(fullimage);
-            modal_content.appendChild(smallbox);
-
-
+app.post('/reg', (req, resp) => {                                             //  then next reg step                                 
+  let location = new Object();
+  try {
+    new ExifImage({ image: req.body.original }, function (error, exifData) {
+      if (error)
+        console.log('Error: sss' + error.message);
+      else {
+        location = exifData.gps;
+        
+        console.log(exifData.gps);
+        const billi = new Cat({
+          name: req.body.name,
+          dob: req.body.dob,
+          gender: req.body.gender,
+          color: req.body.color,
+          weight: req.body.weight,
+          image: 'upload/'+req.file.filename,
+          location: location  
+          
         });
+        console.log(billi);
+        billi.save();
+
+        resp.redirect('index.html')
+      }
+    });
+  } catch (error) {
+    console.log('Error: ' + error.message);
+  }
+
+   
+   //resp.redirect('form.html');
+
+
+})
 
 
 
-        eachImageDiv.appendChild(Image); //appending required div
-        buttonDiv.appendChild(button);
-        eachDiv.appendChild(eachImageDiv);
-        eachDiv.appendChild(titleDiv);
-        eachDiv.appendChild(buttonDiv);
-
-
-        document.querySelector('.container').appendChild(eachDiv);
 
 
 
-    }
+app.get('/', (req, resp) => {  
+  resp.header("Access-Control-Allow-Origin", "*");
+  resp.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");                                                        // to home page
+  resp.redirect('index.html');
+})
+
+app.get('/alldata', (req, res) => {    
+  
+  Cat.find({}, (err, data) => {
+    res.json(data);
+})
+  // to all json file of database
+  /*Cat.find().then(cats => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.json(cats);
+  });*/
+});
 
 
+/*Getting EXIF coordinate in imagae data*/
+/*
+const ExifImage = require('exif').ExifImage;
+app.get('/loc', (req, resp) => {
+resp.status(200);
+  try {
+    new ExifImage({ image: `sarita.jpg` }, function (error, exifData) {
+      if (error)
+        console.log('Error: ' + error.message);
+      else
+        resp.send(exifData);                                  // Do something with your data! 
+    });
+  } catch (error) {
+    console.log('Error: ' + error.messa0ge);
+  }
 
-
-    const close_button = document.querySelector('.close') //close button
-    close_button.addEventListener('click', () => {
-        const any = document.querySelector('.modal');
-        any.style.display = 'none';
-        const modal_content = document.querySelector('.modal-content');
-        modal_content.innerHTML = '';
-    })
-
-
-
-    return receivedJSON;
-}
+})*/

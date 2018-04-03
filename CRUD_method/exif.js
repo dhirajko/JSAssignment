@@ -6,7 +6,7 @@ class exif {
 
     }
 
-    getlocation(image) {
+     getlocation (image) {
 
         let location = new Object();
         try {

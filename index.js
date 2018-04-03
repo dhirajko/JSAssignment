@@ -3,19 +3,14 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const ExifImage = require('exif').ExifImage;
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
-const exiflocation = require('./CRUD_method/exif');
+const database= require('./CRUD_method/database')
+const location= require('./CRUD_method/exif');
+
 
 const app = express();
 const upload = multer({ dest: 'public/upload' });
 
-mongoose.connect('mongodb://localhost/cat').then(() => {
-  console.log('Connected successfully.');
-}, err => {
-  console.log('Connection to db failed: ' + err);
-});
 
 
 app.listen(3000);
@@ -24,32 +19,12 @@ app.use(express.static('form.html'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+database.connectdatabase('mongodb://localhost/cat');
 
-
-
-
-const Schema = mongoose.Schema;                                               // Schema
-
-const catSchema = new Schema({
-  name: String,
-  dob: Date,
-  gender: {
-    type: String,
-    enum: ['male', 'female'],
-  },
-  color: String,
-  weight: Number,
-  image: String,
-  location: Object
-
-});
-
+//Schema
+const Schema= database.createSchema();
 // Model
-const Cat = mongoose.model('Cat', catSchema);
-
-
-/*serve static files (save the form to public-folder) this will create the public folder in server level*/
-
+const Model=database.createModel('Model',Schema);
 
 
 //give the middle ware multer to upload file
@@ -64,14 +39,15 @@ app.post('/reg', upload.single('image'), (req, resp, next) => {
 
 app.post('/reg', (req, resp) => {                                             //  then next reg step                                 
 
-  const billi = new Cat({
+  const billi = new Model({
     name: req.body.name,
     dob: req.body.dob,
     gender: req.body.gender,
     color: req.body.color,
     weight: req.body.weight,
     image: 'upload/' + req.file.filename,
-    location: exiflocation.location(res.body.original)
+    location: location.getlocation(req.body.original)    
+    
 
   });
   console.log(billi);
@@ -102,14 +78,14 @@ app.get('/', (req, resp) => {
 
 app.get('/alldata', (req, res) => {
 
-  Cat.find({}, (err, data) => {
+  Model.find({}, (err, data) => {
     res.json(data);
   })
   // to all json file of database
-  /*Cat.find().then(cats => {
+  /*ImageModel.find().then(ImageModels => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.json(cats);
+  res.json(ImageModels);
   });*/
 });
 
@@ -126,7 +102,7 @@ resp.status(200);
       else
         resp.send(exifData);                                  // Do something with your data! 
     });
-  } catch (error) {
+  } ImageModelch (error) {
     console.log('Error: ' + error.messa0ge);
   }
 

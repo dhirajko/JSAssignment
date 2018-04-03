@@ -1,34 +1,29 @@
 'use strict';
 
 const express = require('express');
-const app = express();
-app.listen(3000);
-
-
-// initalize multer
 const multer = require('multer');
-const upload = multer({ dest: 'public/upload' })
-
-//inatilize path
 const path = require('path');
-app.use(express.static(path.join(__dirname, 'public')));
-
-
-const ExifImage = require('exif').ExifImage;                //using Exif image defined
-app.use(express.static('form.html'));
-
-// body-parser parse application/x-www-form-urlencoded
+const ExifImage = require('exif').ExifImage;
 const bodyParser = require('body-parser');
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())                                                // parse application/json
-
-
 const mongoose = require('mongoose');
+const exiflocation = require('./CRUD_method/exif');
+
+const app = express();
+const upload = multer({ dest: 'public/upload' });
+
 mongoose.connect('mongodb://localhost/cat').then(() => {
   console.log('Connected successfully.');
 }, err => {
   console.log('Connection to db failed: ' + err);
 });
+
+
+app.listen(3000);
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('form.html'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
 
 
 
@@ -61,46 +56,28 @@ const Cat = mongoose.model('Cat', catSchema);
 app.post('/reg', upload.single('image'), (req, resp, next) => {
   console.log(req.file);
 
-  req.body.original = 'public/upload/'+req.file.filename;
+  req.body.original = 'public/upload/' + req.file.filename;
   console.log('uploaded');
   next();
 });
 
 
 app.post('/reg', (req, resp) => {                                             //  then next reg step                                 
-  let location = new Object();
-  try {
-    new ExifImage({ image: req.body.original }, function (error, exifData) {
-      if (error)
-        console.log('Error: sss' + error.message);
-      else {
-        location = exifData.gps;
-        
-        console.log(exifData.gps);
-        const billi = new Cat({
-          name: req.body.name,
-          dob: req.body.dob,
-          gender: req.body.gender,
-          color: req.body.color,
-          weight: req.body.weight,
-          image: 'upload/'+req.file.filename,
-          location: location  
-          
-        });
-        console.log(billi);
-        billi.save();
 
-        resp.redirect('index.html')
-      }
-    });
-  } catch (error) {
-    console.log('Error: ' + error.message);
-  }
+  const billi = new Cat({
+    name: req.body.name,
+    dob: req.body.dob,
+    gender: req.body.gender,
+    color: req.body.color,
+    weight: req.body.weight,
+    image: 'upload/' + req.file.filename,
+    location: exiflocation.location(res.body.original)
 
-   
-   //resp.redirect('form.html');
+  });
+  console.log(billi);
+  billi.save();
 
-
+  resp.redirect('index.html')
 })
 
 
@@ -108,17 +85,26 @@ app.post('/reg', (req, resp) => {                                             //
 
 
 
-app.get('/', (req, resp) => {  
+
+//resp.redirect('form.html');
+
+
+
+
+
+
+
+app.get('/', (req, resp) => {
   resp.header("Access-Control-Allow-Origin", "*");
   resp.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");                                                        // to home page
   resp.redirect('index.html');
 })
 
-app.get('/alldata', (req, res) => {    
-  
+app.get('/alldata', (req, res) => {
+
   Cat.find({}, (err, data) => {
     res.json(data);
-})
+  })
   // to all json file of database
   /*Cat.find().then(cats => {
   res.header("Access-Control-Allow-Origin", "*");

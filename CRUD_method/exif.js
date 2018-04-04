@@ -1,29 +1,36 @@
+
+
 'use strict'
 class exif {
 
     constructor() {
-        this.ExifImage = require('exif').ExifImage;
+        this.ExifImage=require('exif').ExifImage;
 
     }
 
-     getlocation (image) {
+    getlocation(pic,remainingWork) {
 
-        let location = new Object();
+        //let location = new Object();
+
+
         try {
-            new ExifImage({ image: image }, function (error, exifData) {
-                if (error)
-                    console.log('Error: ' + error.message);
-                else {
-                    location = exifData.gps;
-                    return location;
-                }
-
-            }
-
-            )}catch (error) {
+            console.log(pic);
+            
+            new ExifImage({ image: pic }, function (error, exifData) {
+              if (error)
+                console.log('Error: ' + error.message);
+              else
+                console.log(exifData.gps);
+                return exifData.gps;
+            }).then((gps)=>{
+                remainingWork(gps);
+                
+            });
+          } catch (error) {
             console.log('Error: ' + error.message);
           }
+           
     }
 }
 
-module.exports=new exif;
+module.exports = new exif;

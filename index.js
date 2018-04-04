@@ -4,8 +4,8 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const bodyParser = require('body-parser');
-const database= require('./CRUD_method/database')
-const location= require('./CRUD_method/exif');
+const database = require('./CRUD_method/database')
+const ExifImage = require('exif').ExifImage;
 
 
 const app = express();
@@ -22,9 +22,9 @@ app.use(bodyParser.json());
 database.connectdatabase('mongodb://localhost/cat');
 
 //Schema
-const Schema= database.createSchema();
+const Schema = database.createSchema();
 // Model
-const Model=database.createModel('Model',Schema);
+const Model = database.createModel('Model', Schema);
 
 
 //give the middle ware multer to upload file
@@ -37,38 +37,63 @@ app.post('/reg', upload.single('image'), (req, resp, next) => {
 });
 
 
-app.post('/reg', (req, resp) => {                                             //  then next reg step                                 
 
-  const billi = new Model({
-    name: req.body.name,
-    dob: req.body.dob,
-    gender: req.body.gender,
-    color: req.body.color,
-    weight: req.body.weight,
-    image: 'upload/' + req.file.filename,
-    location: location.getlocation(req.body.original)    
-    
+app.post('/reg', (req, resp) => {
 
-  });
-  console.log(billi);
-  billi.save();
+  let api = (locData) => {
+    const Image = new Model({
+      name: req.body.name,
+      dob: req.body.dob,
+      gender: req.body.gender,
+      color: req.body.color,
+      weight: req.body.weight,
+      image: 'upload/' + req.file.filename,
+      location: locData
+    });
+    Image.save();
+    console.log(Image);
 
-  resp.redirect('index.html')
+  }
+
+
+  try {
+    new ExifImage({ image: req.body.original }, function (error, exifData) {
+      if (error) {
+        const emptyloc = {
+          GPSLatitudeRef: '',
+          GPSLatitude: [],
+          GPSLongitudeRef: '',
+          GPSLongitude: [],
+          GPSAltitudeRef: null,
+          GPSAltitude: null,
+          GPSTimeStamp: [],
+          GPSDateStamp: ''
+        }
+      
+      console.log('Empty loc : ' + emptyloc);
+
+      api(emptyloc);
+      //console.log('Error: '+error.message);
+    }
+            
+            
+        else {
+        //console.log(exifData);
+        api(exifData.gps);
+
+      }
+    });
+} catch (error) {
+  console.log('Error: ' + error.message);
+}
+
+
+
+//console.log(Image);
+resp.redirect('index.html')
 })
 
-
-
-
-
-
-
 //resp.redirect('form.html');
-
-
-
-
-
-
 
 app.get('/', (req, resp) => {
   resp.header("Access-Control-Allow-Origin", "*");
@@ -96,13 +121,13 @@ const ExifImage = require('exif').ExifImage;
 app.get('/loc', (req, resp) => {
 resp.status(200);
   try {
-    new ExifImage({ image: `sarita.jpg` }, function (error, exifData) {
+    new ExifImage({ image: `/upload/e96a71c325adb28a49542a9908b74734.jpg` }, function (error, exifData) {
       if (error)
         console.log('Error: ' + error.message);
       else
         resp.send(exifData);                                  // Do something with your data! 
     });
-  } ImageModelch (error) {
+  } catch (error) {
     console.log('Error: ' + error.messa0ge);
   }
 
